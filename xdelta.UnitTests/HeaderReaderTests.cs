@@ -18,111 +18,108 @@
 //
 //  You should have received a copy of the GNU General Public License
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
-using NUnit.Framework;
+using Xunit;
 using System;
 using System.IO;
 
 namespace Xdelta.UnitTests
 {
-	[TestFixture]
-	public class HeaderReaderTests
-	{
+    public class HeaderReaderTests : IDisposable
+    {
         private static readonly System.Text.Encoding Encoding = System.Text.Encoding.ASCII;
 
-		private MemoryStream input;
+        private MemoryStream input;
         private MemoryStream output;
-		private MemoryStream patch;
-              
-		[SetUp]
-		public void SetUp()
-		{
-            input  = new MemoryStream();
-            output = new MemoryStream();
-            patch  = new MemoryStream();
-		}
+        private MemoryStream patch;
 
-        [TearDown]
-        public void TearDown()
+        public HeaderReaderTests()
+        {
+            input = new MemoryStream();
+            output = new MemoryStream();
+            patch = new MemoryStream();
+        }
+
+        public void Dispose()
         {
             patch.Dispose();
             input.Dispose();
             output.Dispose();
         }
 
-		private void WriteBytes(params byte[] data)
-		{
-			patch.Write(data, 0, data.Length);
-			patch.Position -= data.Length;
-		}
-
-		private void TestThrows<T>(string message)
-			where T : SystemException
-		{
-			T exception = Assert.Throws<T>(() => new Decoder(input, patch, output));
-			Assert.AreEqual(message, exception.Message);
-		}
-
-		[Test]
-		public void InvalidStamp()
-		{
-			WriteBytes(0x00, 0xAA, 0xBB, 0xCC);
-			TestThrows<FormatException>("not a VCDIFF input");
-		}
-
-		[Test]
-		public void InvalidVersion()
-		{
-			WriteBytes(0xD6, 0xC3, 0xC4, 0x01);
-			TestThrows<FormatException>("VCDIFF input version > 0 is not supported");
-		}
-
-		[Test]
-		public void InvalidHeaderIndicator()
-		{
-			WriteBytes(0xD6, 0xC3, 0xC4, 0x00, 0xF8);
-			TestThrows<FormatException>("unrecognized header indicator bits set");
-		}
-
-        [Test]
-        public void InvalidHeaderIndicator2()
+        private void WriteBytes(params byte[] data)
         {
-			WriteBytes(0xD6, 0xC3, 0xC4, 0x00, 0x48);
+            patch.Write(data, 0, data.Length);
+            patch.Position -= data.Length;
+        }
+
+        private void TestThrows<T>(string message)
+            where T : SystemException
+        {
+            T exception = Assert.Throws<T>(() => new Decoder(input, patch, output));
+            Assert.Equal(message, exception.Message);
+        }
+
+        [Fact]
+        public void InvalidStamp()
+        {
+            WriteBytes(0x00, 0xAA, 0xBB, 0xCC);
+            TestThrows<FormatException>("not a VCDIFF input");
+        }
+
+        [Fact]
+        public void InvalidVersion()
+        {
+            WriteBytes(0xD6, 0xC3, 0xC4, 0x01);
+            TestThrows<FormatException>("VCDIFF input version > 0 is not supported");
+        }
+
+        [Fact]
+        public void InvalidHeaderIndicator()
+        {
+            WriteBytes(0xD6, 0xC3, 0xC4, 0x00, 0xF8);
             TestThrows<FormatException>("unrecognized header indicator bits set");
         }
 
-		[Test]
-		public void HasSecondaryCompressor()
-		{
-			WriteBytes(0xD6, 0xC3, 0xC4, 0x00, 0x01);
-			TestThrows<NotSupportedException>("unavailable secondary compressor");
-		}
-
-		[Test]
-		public void HasCodeTable()
-		{
-			WriteBytes(0xD6, 0xC3, 0xC4, 0x00, 0x02);
-			TestThrows<NotSupportedException>("compressed code table not implemented");
-		}
-
-        [Test]
-        public void DoesNotThrowExceptionIfNotHeader()
+        [Fact]
+        public void InvalidHeaderIndicator2()
         {
-			WriteBytes(0xD6, 0xC3, 0xC4, 0x00, 0x00);
-            Assert.DoesNotThrow(() => new Decoder(input, patch, output));
+            WriteBytes(0xD6, 0xC3, 0xC4, 0x00, 0x48);
+            TestThrows<FormatException>("unrecognized header indicator bits set");
         }
 
-        [Test]
+        [Fact]
+        public void HasSecondaryCompressor()
+        {
+            WriteBytes(0xD6, 0xC3, 0xC4, 0x00, 0x01);
+            TestThrows<NotSupportedException>("unavailable secondary compressor");
+        }
+
+        [Fact]
+        public void HasCodeTable()
+        {
+            WriteBytes(0xD6, 0xC3, 0xC4, 0x00, 0x02);
+            TestThrows<NotSupportedException>("compressed code table not implemented");
+        }
+
+        [Fact]
+        public void DoesNotThrowExceptionIfNotHeader()
+        {
+            WriteBytes(0xD6, 0xC3, 0xC4, 0x00, 0x00);
+            Assert.Null(Record.Exception(() => new Decoder(input, patch, output)));
+        }
+
+        [Fact]
         public void ReadCorrectlyApplicationData()
         {
-			WriteBytes(0xD6, 0xC3, 0xC4, 0x00, 0x04, 0x07);
+            WriteBytes(0xD6, 0xC3, 0xC4, 0x00, 0x04, 0x07);
 
-			patch.Position = 6;
-			WriteBytes(Encoding.GetBytes("pleonex"));
+            patch.Position = 6;
+            WriteBytes(Encoding.GetBytes("pleonex"));
             patch.Position = 0;
 
             Decoder decoder = new Decoder(input, patch, output);
-            Assert.AreEqual("pleonex", decoder.Header.ApplicationData);
+            Assert.Equal("pleonex", decoder.Header.ApplicationData);
         }
-	}
+    }
 }
 

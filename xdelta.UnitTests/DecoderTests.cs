@@ -20,12 +20,11 @@
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 using System;
 using System.IO;
-using NUnit.Framework;
+using Xunit;
 
 namespace Xdelta.UnitTests
 {
-    [TestFixture]
-    public class DecoderTests
+    public class DecoderTests : IDisposable
     {
         private Decoder decoder;
         private Stream input;
@@ -46,8 +45,7 @@ namespace Xdelta.UnitTests
             decoder = new Decoder(input, patch, output);
         }
 
-        [TearDown]
-        public void TearDown()
+        public void Dispose()
         {
             if (input != null)
                 input.Dispose();
@@ -59,33 +57,14 @@ namespace Xdelta.UnitTests
                 output.Dispose();
         }
 
-        [Test]
+        [Fact]
         public void Getters()
         {
             InitWithStandardHeader();
 
-            Assert.AreSame(input, decoder.Input);
-            Assert.AreSame(patch, decoder.Patch);
-            Assert.AreSame(output, decoder.Output);
+            Assert.Equal(input, decoder.Input);
+            Assert.Equal(patch, decoder.Patch);
+            Assert.Equal(output, decoder.Output);
         }
-
-        #if DEBUG
-        [Test]
-        [Ignore]
-        public void NinokuniPatch()
-        {
-            string gamePath = "/store/Juegos/NDS/Ninokuni [CLEAN].nds";
-            string patchPath = "/home/benito/parche.xdelta";
-            patch  = new FileStream(patchPath, FileMode.Open);
-            input  = new FileStream(gamePath, FileMode.Open);
-            output = new MemoryStream();
-
-            Assert.DoesNotThrow(() => {
-                decoder = new Decoder(input, patch, output);
-                decoder.Run();
-            });
-        }
-        #endif
     }
 }
-

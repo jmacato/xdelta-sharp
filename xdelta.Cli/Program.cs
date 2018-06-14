@@ -29,12 +29,16 @@ namespace Xdelta.Cli
         public static void Main(string[] args)
         {
             if (args.Length != 3)
+            {
+                Console.WriteLine("XDelta VCDIFF Tool");
+                Console.WriteLine("\r\nUsage: xdelta {Source file} {Patch (*.xdelta)} {Target filename}.");
                 return;
+            }
 
             Stopwatch watcher = Stopwatch.StartNew();
 
             using (FileStream source = OpenForRead(args[0]))
-            using (FileStream patch  = OpenForRead(args[1]))
+            using (FileStream patch = OpenForRead(args[1]))
             using (FileStream target = CreateForWriteAndRead(args[2]))
                 new Decoder(source, patch, target).Run();
 
